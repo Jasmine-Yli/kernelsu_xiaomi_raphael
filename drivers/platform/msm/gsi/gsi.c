@@ -542,7 +542,6 @@ static void gsi_process_chan(struct gsi_xfer_compl_evt *evt,
 			ch_ctx->ring.rp_local = rp;
 		}
 
-
 		/*
 		 * Increment RP local only in polling context to avoid
 		 * sys len mismatch.
