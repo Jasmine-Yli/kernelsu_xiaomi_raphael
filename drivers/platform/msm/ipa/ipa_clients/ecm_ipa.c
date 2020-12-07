@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -656,7 +656,7 @@ static netdev_tx_t ecm_ipa_start_xmit
 				, skb->protocol);
 
 	ret = ipa_tx_dp(ecm_ipa_ctx->ipa_to_usb_client, skb, NULL);
-	if (unlikely(ret)) {
+	if (ret) {
 		ECM_IPA_ERROR("ipa transmit failed (%d)\n", ret);
 		goto fail_tx_packet;
 	}
@@ -668,8 +668,7 @@ static netdev_tx_t ecm_ipa_start_xmit
 
 fail_tx_packet:
 out:
-	if (atomic_read(&ecm_ipa_ctx->outstanding_pkts) == 0)
-		resource_release(ecm_ipa_ctx);
+	resource_release(ecm_ipa_ctx);
 resource_busy:
 	return status;
 }
@@ -692,7 +691,7 @@ static void ecm_ipa_packet_receive_notify
 	int result;
 	unsigned int packet_len;
 
-	if (unlikely(!skb)) {
+	if (!skb) {
 		ECM_IPA_ERROR("Bad SKB received from IPA driver\n");
 		return;
 	}
@@ -700,21 +699,13 @@ static void ecm_ipa_packet_receive_notify
 	packet_len = skb->len;
 	ECM_IPA_DEBUG("packet RX, len=%d\n", skb->len);
 
-	if (unlikely(ecm_ipa_ctx == NULL)) {
-		ECM_IPA_DEBUG("Private context is NULL. Drop SKB.\n");
-		dev_kfree_skb_any(skb);
-		return;
-	}
-
 	if (unlikely(ecm_ipa_ctx->state != ECM_IPA_CONNECTED_AND_UP)) {
 		ECM_IPA_DEBUG("Missing pipe connected and/or iface up\n");
-		dev_kfree_skb_any(skb);
 		return;
 	}
 
-	if (unlikely(evt != IPA_RECEIVE))	{
+	if (evt != IPA_RECEIVE)	{
 		ECM_IPA_ERROR("A none IPA_RECEIVE event in ecm_ipa_receive\n");
-		dev_kfree_skb_any(skb);
 		return;
 	}
 
@@ -722,7 +713,7 @@ static void ecm_ipa_packet_receive_notify
 	skb->protocol = eth_type_trans(skb, ecm_ipa_ctx->net);
 
 	result = netif_rx(skb);
-	if (unlikely(result))
+	if (result)
 		ECM_IPA_ERROR("fail on netif_rx\n");
 	ecm_ipa_ctx->net->stats.rx_packets++;
 	ecm_ipa_ctx->net->stats.rx_bytes += packet_len;
@@ -877,9 +868,7 @@ void ecm_ipa_cleanup(void *priv)
 	ecm_ipa_rules_destroy(ecm_ipa_ctx);
 	ecm_ipa_debugfs_destroy(ecm_ipa_ctx);
 
-	ECM_IPA_DEBUG("ECM_IPA unregister_netdev started\n");
 	unregister_netdev(ecm_ipa_ctx->net);
-	ECM_IPA_DEBUG("ECM_IPA unregister_netdev completed\n");
 	free_netdev(ecm_ipa_ctx->net);
 
 	ECM_IPA_INFO("ECM_IPA was destroyed successfully\n");
@@ -1299,12 +1288,12 @@ static void ecm_ipa_tx_complete_notify
 	struct sk_buff *skb = (struct sk_buff *)data;
 	struct ecm_ipa_dev *ecm_ipa_ctx = priv;
 
-	if (unlikely(!skb)) {
+	if (!skb) {
 		ECM_IPA_ERROR("Bad SKB received from IPA driver\n");
 		return;
 	}
 
-	if (unlikely(!ecm_ipa_ctx)) {
+	if (!ecm_ipa_ctx) {
 		ECM_IPA_ERROR("ecm_ipa_ctx is NULL pointer\n");
 		return;
 	}
@@ -1314,7 +1303,7 @@ static void ecm_ipa_tx_complete_notify
 		skb->len, skb->protocol,
 		atomic_read(&ecm_ipa_ctx->outstanding_pkts));
 
-	if (unlikely(evt != IPA_WRITE_DONE)) {
+	if (evt != IPA_WRITE_DONE) {
 		ECM_IPA_ERROR("unsupported event on Tx callback\n");
 		return;
 	}
@@ -1342,9 +1331,6 @@ static void ecm_ipa_tx_complete_notify
 			ecm_ipa_ctx->outstanding_low);
 		netif_wake_queue(ecm_ipa_ctx->net);
 	}
-
-	if (atomic_read(&ecm_ipa_ctx->outstanding_pkts) == 0)
-		resource_release(ecm_ipa_ctx);
 
 out:
 	dev_kfree_skb_any(skb);
