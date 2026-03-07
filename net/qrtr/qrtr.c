@@ -1115,6 +1115,7 @@ static void qrtr_node_rx_work(struct kthread_work *work)
 			   cb->type == QRTR_TYPE_DATA) {
 			qrtr_fwd_pkt(skb, cb);
 		} else if (cb->type == QRTR_TYPE_DEL_PROC) {
+			qrtr_cleanup_flow_control(node, skb);
 			qrtr_handle_del_proc(node, skb);
 		} else {
 			ipc = qrtr_port_lookup(cb->dst_port);
