@@ -1,8 +1,7 @@
 name: Continues testing
 
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -25,6 +24,9 @@ jobs:
             kernel-build-cache
           max-size: '10G'
 
+      - name: Resukisu
+        run: |
+         curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
       - name: Restore toolchain cache
         id: restore-clang
         uses: actions/cache/restore@v4
